@@ -21,10 +21,10 @@
 
 
 % Title page
-\university{Vilnius University}
-\faculty{Faculty of Mathematics and Informatics}
-\department{Software Engineering Master's Study Program}
-\papertype{Master's Thesis}
+\university{VILNIUS UNIVERSITY}
+\faculty{FACULTY OF MATHEMATICS AND INFORMATICS}
+\department{SOFTWARE ENGINEERING MASTERS STUDY PROGRAM}
+\papertype{Master thesis}
 \title{End-to-End Neural Text-to-Speech Synthesis for the Lithuanian Language}
 \titleineng{}
 \author{Vytautas Lėveris}
@@ -65,35 +65,84 @@
 %\keywords{keyword 1, keyword 2, keyword 3, keyword 4, keyword 5}
 %\end{english}
 
-%\tableofcontents
+\tableofcontents
 
-\sectionnonumnocontent{Master's Thesis Research Plan}
-%Įvade aprašomi darbo tikslai ir uždaviniai, nurodomas temos aktualumas, aptariamos
-%teorinės darbo prielaidos bei metodika, apibrėžiamas tiriamasis objektas, apibūdinami
-%su tema susiję literatūros ar kitokie šaltiniai, temos analizės tvarka, darbo atlikimo
-%aplinkybės, pateikiama žinių apie naudojamus instrumentus (programas ir kt.). Darbo
-%įvadas neturi būti dėstymo santrauka. Įvado apimtis 3--4 puslapiai.
+\sectionnonum{Introduction}
 
-\textbf{Introduction}.
+\subsection*{Motivation}
 
-\textbf{Background}.
+Text-to-Speech (TTS) synthesis is a field of speech technology that focuses on converting written text into natural-sounding human speech. Over the past decades, TTS systems have evolved from simple rule-based mechanisms producing robotic and monotonous speech into highly advanced neural systems capable of generating expressive, fluent, and human-like audio. Today, TTS technology plays an important role in modern human–computer interaction and has become an integral component of many everyday applications, including virtual assistants (e.g. Siri or Alexa), accessibility tools, navigation systems, audiobooks, customer service automation, and language learning or text translation platforms~\cite{kavitha2024enhancing}.
 
-\textbf{Research Object}.
+The growing demand for natural speech interfaces is driven by rapid advancements in artificial intelligence (AI), particularly in deep learning and neural network architectures. Neural TTS systems have significantly improved speech naturalness, prosody modeling, and pronunciation accuracy compared to earlier approaches. These systems learn the mapping from text directly to speech waveforms or intermediate acoustic representations, reducing the need for handcrafted rules and linguistic expertise. Modern TTS solutions are more scalable and adaptable across different languages and speaking styles.
 
-\textbf{Research Goal}.
+Despite the impressive progress achieved for widely spoken languages such as English, Chinees or Spanish, many smaller or low-resource languages remain underrepresented in TTS research and development. Lithuanian, a Baltic language with complex morphology, rich inflection, and distinctive phonetic characteristics, is one such language. Developing high-quality neural TTS systems for Lithuanian presents both linguistic and technical challenges, making it an interesting and relevant research topic.
 
-\textbf{Objectives}:
+This Master’s thesis focuses on end-to-end neural text-to-speech synthesis for the Lithuanian language, with the goal of evaluating state-of-the-art TTS models, training them on Lithuanian speech data, and experimentally assessing their performance and suitability for this language.
+
+\subsection*{Applications of Text-to-Speech Technology}
+
+The importance of TTS technology extends beyond convenience and entertainment. One of its most impactful application areas is accessibility. For individuals with visual impairments, reading difficulties, or certain motor disabilities, TTS systems enable access to digital content, educational materials, and communication tools~\cite{chalamandaris2010unit, reddy2023speech}. Screen readers and voice-based interfaces rely heavily on high-quality speech synthesis to provide an inclusive user experience.
+
+Another major application domain is human–computer interaction. Voice assistants such as smart speakers, mobile assistants, and in-car systems use TTS to communicate information naturally and efficiently~\cite{mohasi2006text}. As voice-based interaction becomes more prevalent, users increasingly expect synthesized speech to be expressive, emotionally appropriate, and indistinguishable from human speech.
+
+TTS is also widely used in education and language learning, where it can provide pronunciation examples, reading assistance, and interactive learning experiences. In media and content creation, TTS enables the automated generation of audiobooks, news narration, podcasts, and video voiceovers, significantly reducing production costs and time.
+
+In addition, TTS technology has applications in telecommunications, customer support automation, assistive robotics, and game development, where dynamic and context-aware speech synthesis enhances realism and user engagement. These diverse applications highlight the societal and economic value of advancing TTS research, particularly for languages that currently lack high-quality solutions.
+
+\subsection*{Classical Approaches to TTS Synthesis}
+
+Before the rise of neural networks, TTS systems were primarily based on rule-based and signal-processing-driven methods. One of the earliest approaches is the formant synthesis method, which models human speech production using mathematical representations of vocal tract resonances (formants). Formant-based systems generate speech by simulating the physical properties of the human speech apparatus and applying handcrafted rules for phoneme articulation and prosody.
+
+While formant synthesis offers advantages such as low computational requirements and complete control over speech parameters, it typically produces speech that sounds artificial and lacks naturalness~\cite{reddy2023speech}. Creating high-quality formant-based systems also requires extensive linguistic knowledge and manual tuning, making them difficult to adapt to new languages.
+
+Another widely used classical approach is concatenative synthesis, which constructs speech by concatenating pre-recorded speech units, such as phonemes, diphones (i.e. units that begin in the middle of the stable state of a phone and end in the middle of the following one), half-syllables, or triphones (which differ from diphones in that they include a complete central phone)~\cite{dutoit1997high}. These units are stored in a speech database and selected based on linguistic and acoustic criteria. Concatenative TTS systems can produce relatively natural-sounding speech when sufficient high-quality recordings are available.
+
+However, concatenative TTS methods have some notable limitations. It requires large, carefully designed speech corpora and struggles with prosodic variation, expressive speech, and unseen contexts. Such methods require huge amount of data to match all possible combinations of speech units, especially for morphologically rich languages like Lithuanian, where the number of possible word forms is large.
+
+Later developments introduced statistical parametric speech synthesis, most notably based on Hidden Markov Models (HMMs). These systems model speech parameters statistically. instead of directly producing an output waveform, acoustic features are firstly extracted, and then final waveform is reconstructed through such predicted parameters~\cite{hasanabadi2023overview}. Although HMM-based TTS improves flexibility and reduces database size requirements, the generated speech often sounds over-smoothed and less natural than concatenative approaches.
+
+\subsection*{Emergence of Neural TTS Systems}
+
+The introduction of deep learning marked a turning point in TTS research. Neural network-based approaches replaced many handcrafted components with data-driven models capable of learning complex relationships directly from data. Early neural TTS systems focused on predicting acoustic features, such as mel-spectrograms, which are then converted into waveforms using vocoders.
+
+End-to-end neural TTS systems represent a further step in this evolution. Models such as Tacotron, Tacotron 2, FastSpeech, and their variants learn to map text sequences directly to acoustic representations, often using attention mechanisms to align text and speech. Neural vocoders, including WaveNet, WaveRNN, and HiFi-GAN, have dramatically improved waveform generation quality and efficiency.
+
+These architectures offer several advantages over traditional methods:
+\begin{itemize}
+\item significantly improved speech naturalness and intelligibility,
+\item better modeling of prosody, intonation, and rhythm,
+\item reduced reliance on expert linguistic rules,
+\item greater adaptability to new speakers and languages.
+\end{itemize}
+
+As a result, neural end-to-end TTS has become the dominant paradigm in modern speech synthesis research and industry applications.
+
+\subsection*{Challenges and Motivation for Lithuanian TTS}
+
+Lithuanian presents specific challenges for TTS systems due to its rich morphology, complex stress patterns, and phonetic distinctions. The language exhibits a large number of inflected forms, which increases vocabulary size and complicates text normalization and pronunciation modeling. Stress placement in Lithuanian can vary and plays an important role in meaning and naturalness of speech.
+
+Lithuanian is considered a low-resource language in the context of speech technology, as publicly available, high-quality speech datasets are limited compared to major world languages. This makes it particularly interesting to study how modern neural TTS architectures perform under data constraints and what strategies can be used to improve synthesis quality.
+
+Developing effective TTS systems for Lithuanian is not only academically relevant but also socially meaningful. High-quality Lithuanian TTS could support accessibility, education, digital preservation of the language, and the development of local AI-driven products and services.
+
+\subsection*{Research Object}
+
+investigate and evaluate end-to-end neural text-to-speech synthesis models for the Lithuanian language.
+
+\subsection*{Research Goal}
+
+Experiment and understand neural TTS performance for morphologically rich, low-resource languages and to provide insights that may support future development of Lithuanian speech synthesis systems.
+
+\subsection*{Tasks to achieve the goal}
 \begin{enumerate}
-\item .
-\item .
-\item .
-\item .
-\item .
+\item a review of classical and neural TTS approaches.
+\item An analysis of modern end-to-end TTS models.
+\item Preparation and processing of Lithuanian language datasets.
+\item Training and experimentation with selected TTS models.
+\item Evaluation of synthesized speech quality using objective and/or subjective metrics.
 \end{enumerate}
 
-\textbf{Research Hypothesis}.
-
-\textbf{Research Methods}:
+\subsection*{Research Methods}
 \begin{itemize}
 \item ;
 \item ;
@@ -101,12 +150,6 @@
 \item ;
 \item .
 \end{itemize}
-
-\textbf{Expected Results}:
-\begin{enumerate}
-\item ;
-\item .
-\end{enumerate}
 
 
 %\sectionnonum{Rezultatai}
