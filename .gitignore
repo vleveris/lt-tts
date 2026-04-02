@@ -7,3 +7,5 @@
 *.log
 *.xml
 /*.pdf
+CLAUDE.md
+.claude/settings.local.json

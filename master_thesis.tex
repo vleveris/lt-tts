@@ -89,34 +89,6 @@ TTS is also widely used in education and language learning, where it can provide
 
 In addition, TTS technology has applications in telecommunications, customer support automation, assistive robotics, and game development, where dynamic and context-aware speech synthesis enhances realism and user engagement. These diverse applications highlight the societal and economic value of advancing TTS research, particularly for languages that currently lack high-quality solutions.
 
-\subsection*{Classical Approaches to TTS Synthesis}
-
-Before the rise of neural networks, TTS systems were primarily based on rule-based and signal-processing-driven methods. One of the earliest approaches is the formant synthesis method, which models human speech production using mathematical representations of vocal tract resonances (formants). Formant-based systems generate speech by simulating the physical properties of the human speech apparatus and applying handcrafted rules for phoneme articulation and prosody.
-
-While formant synthesis offers advantages such as low computational requirements and complete control over speech parameters, it typically produces speech that sounds artificial and lacks naturalness~\cite{reddy2023speech}. Creating high-quality formant-based systems also requires extensive linguistic knowledge and manual tuning, making them difficult to adapt to new languages.
-
-Another widely used classical approach is concatenative synthesis, which constructs speech by concatenating pre-recorded speech units, such as phonemes, diphones (i.e. units that begin in the middle of the stable state of a phone and end in the middle of the following one), half-syllables, or triphones (which differ from diphones in that they include a complete central phone)~\cite{dutoit1997high}. These units are stored in a speech database and selected based on linguistic and acoustic criteria. Concatenative TTS systems can produce relatively natural-sounding speech when sufficient high-quality recordings are available.
-
-However, concatenative TTS methods have some notable limitations. It requires large, carefully designed speech corpora and struggles with prosodic variation, expressive speech, and unseen contexts. Such methods require huge amount of data to match all possible combinations of speech units, especially for morphologically rich languages like Lithuanian, where the number of possible word forms is large.
-
-Later developments introduced statistical parametric speech synthesis, most notably based on Hidden Markov Models (HMMs). These systems model speech parameters statistically. instead of directly producing an output waveform, acoustic features are firstly extracted, and then final waveform is reconstructed through such predicted parameters~\cite{hasanabadi2023overview}. Although HMM-based TTS improves flexibility and reduces database size requirements, the generated speech often sounds over-smoothed and less natural than concatenative approaches.
-
-\subsection*{Emergence of Neural TTS Systems}
-
-The introduction of deep learning marked a turning point in TTS research. Neural network-based approaches replaced many handcrafted components with data-driven models capable of learning complex relationships directly from data. Early neural TTS systems focused on predicting acoustic features, such as mel-spectrograms, which are then converted into waveforms using vocoders.
-
-End-to-end neural TTS systems represent a further step in this evolution. Models such as Tacotron, Tacotron 2, FastSpeech, and their variants learn to map text sequences directly to acoustic representations, often using attention mechanisms to align text and speech. Neural vocoders, including WaveNet, WaveRNN, and HiFi-GAN, have dramatically improved waveform generation quality and efficiency.
-
-These architectures offer several advantages over traditional methods:
-\begin{itemize}
-\item significantly improved speech naturalness and intelligibility,
-\item better modeling of prosody, intonation, and rhythm,
-\item reduced reliance on expert linguistic rules,
-\item greater adaptability to new speakers and languages.
-\end{itemize}
-
-As a result, neural end-to-end TTS has become the dominant paradigm in modern speech synthesis research and industry applications.
-
 \subsection*{Challenges and Motivation for Lithuanian TTS}
 
 Lithuanian presents specific challenges for TTS systems due to its rich morphology, complex stress patterns, and phonetic distinctions. The language exhibits a large number of inflected forms, which increases vocabulary size and complicates text normalization and pronunciation modeling. Stress placement in Lithuanian can vary and plays an important role in meaning and naturalness of speech.
@@ -151,6 +123,88 @@ Experiment and understand neural TTS performance for morphologically rich, low-r
 \item .
 \end{itemize}
 
+
+\section{Text-to-Speech Synthesis}
+
+\subsection{Classical Approaches to TTS Synthesis}
+
+A complete TTS system consists of two main processing stages~\cite{taylor2009text}. The \emph{front end} (text analysis) converts raw input text into a linguistic representation by performing text normalization, part-of-speech tagging, grapheme-to-phoneme conversion, and prosody prediction. The \emph{back end} (speech synthesis) uses this representation to generate an audio waveform. Classical TTS systems differ primarily in how the back end operates.
+
+\subsubsection{Formant Synthesis}
+
+Formant synthesis is one of the earliest approaches to machine speech production. It models the human vocal tract as a series of acoustic resonances known as formants — the first three of which (F1, F2, F3) largely determine vowel quality. A formant synthesizer generates speech by exciting a bank of resonant filters with either a periodic glottal source signal for voiced sounds, or a noise source for fricatives and other unvoiced sounds, and by varying the filter parameters over time according to the phonemic transcription and prosody specification provided by the front end~\cite{taylor2009text}.
+
+The most influential formant synthesizer was described by Klatt~\cite{klatt1980software}, who presented a cascade/parallel architecture in which voiced sounds pass through resonators arranged in cascade (modelling the normal vocal tract transfer function), while nasals and some fricatives are handled by a parallel filter bank. The synthesizer was controlled by approximately 40 time-varying parameters — including fundamental frequency, voicing amplitude, formant frequencies and bandwidths for F1--F5, and source spectral tilt — updated at a frame rate of 5~ms. Commercial products such as DECTalk were built on this foundation and found widespread use in assistive technology throughout the 1980s and 1990s.
+
+Formant synthesis offers practical advantages: the synthesizer itself is compact, requires no recorded speech database, and allows precise control over every acoustic parameter. However, producing natural-sounding output requires extensive phonological and phonetic expertise, and the handcrafted rules must be re-developed from scratch for each new language. In practice, formant-based systems produce speech that sounds robotic and monotonous, and they have largely been superseded by data-driven approaches~\cite{reddy2023speech}.
+
+\subsubsection{Concatenative Synthesis}
+
+Concatenative synthesis constructs speech by selecting and joining pre-recorded speech segments stored in a database, relying on the naturalness inherent in real human recordings rather than acoustic modelling.
+
+The simplest concatenative approach uses \emph{diphones} as the basic unit~\cite{dutoit1997high}. A diphone spans from the middle of one phoneme to the middle of the following one, thereby capturing the coarticulatory transition between them. Because the inventory of distinct phoneme pairs in a language is relatively small — on the order of a few thousand — a complete diphone set can be recorded in a short session with a single speaker. After concatenation, prosodic modification is applied to match the target pitch contour and duration. The most widely used technique for this purpose is TD-PSOLA (Time-Domain Pitch Synchronous Overlap and Add)~\cite{moulines1990pitch}, which time-scales and pitch-shifts individual pitch periods while preserving the overall spectral envelope.
+
+A more capable variant is \emph{unit selection} synthesis~\cite{hunt1996unit}. Rather than a minimal diphone inventory, unit selection systems index a large corpus of natural speech — typically several hours of recordings — and store every available acoustic unit (phones, half-phones, diphones, syllables, or words). At synthesis time, a Viterbi search selects the sequence of units that minimises a combined cost:
+\begin{equation}
+C = \sum_{i} \bigl[ C_t(u_i,\, t_i) + C_j(u_i,\, u_{i-1}) \bigr],
+\end{equation}
+where $C_t$ is the \emph{target cost} measuring how well unit $u_i$ matches the desired phonetic and prosodic target $t_i$, and $C_j$ is the \emph{join cost} measuring the spectral discontinuity at the boundary between consecutive units~\cite{hunt1996unit}. When a closely matching unit is found, no prosodic modification is required, and the resulting speech can be remarkably natural. Quality degrades, however, when required units are absent from the database or joins are acoustically mismatched.
+
+A key limitation of concatenative methods for morphologically rich languages such as Lithuanian is coverage. The large number of distinct inflected word forms increases the probability that certain phonetic contexts are absent from even a large corpus, forcing the system to use poorly matching units or acoustically disruptive concatenations~\cite{chalamandaris2010unit}.
+
+\subsubsection{Statistical Parametric Speech Synthesis}
+
+Statistical parametric speech synthesis (SPSS) addresses the database size and coverage limitations of concatenative methods by replacing the unit inventory with a compact statistical model trained on speech data. The dominant approach within this paradigm uses Hidden Markov Models (HMMs) and is embodied in the HTS (HMM-based Speech Synthesis) system~\cite{zen2009statistical, tokuda2013speech}.
+
+In HMM-based TTS, each context-dependent phoneme is modelled by a left-to-right HMM whose states emit probability distributions over acoustic feature vectors. The features are extracted frame-by-frame from training recordings using a vocoder (e.g. STRAIGHT or WORLD) and typically include mel-generalized cepstral (MGC) coefficients representing the spectral envelope, log fundamental frequency F0, and aperiodicity measures. Because the space of possible phonetic contexts — accounting for surrounding phonemes, syllable position, stress, and sentence type — vastly exceeds the amount of training data, contexts are clustered using decision trees, allowing model parameters to be shared across similar contexts and alleviating data sparsity~\cite{zen2009statistical}.
+
+At synthesis time, the sequence of context-dependent HMMs for the input utterance is determined by the front end, and a maximum-likelihood parameter generation (MLPG) algorithm~\cite{tokuda2013speech} is applied to produce a smooth trajectory of acoustic features that jointly satisfies constraints on the static features and their delta and delta-delta coefficients. The resulting feature sequence is then passed to the vocoder to reconstruct the waveform.
+
+The principal advantages of HMM-based synthesis are a small model footprint, the ability to adapt to new speakers with limited data using techniques such as maximum likelihood linear regression (MLLR), and straightforward control over speaking style through model interpolation. The main drawback is that the maximum likelihood estimation inherently averages over the training data, producing over-smoothed parameter trajectories that result in muffled, lacking spectral detail speech. Additional artefacts arise from the vocoder-based waveform reconstruction, which introduces a characteristic buzziness. These shortcomings were the primary motivation for the shift toward neural network-based approaches~\cite{hasanabadi2023overview}.
+
+\subsection{Emergence of Neural TTS Systems}
+
+The limitations of statistical parametric synthesis --- over-smoothed trajectories and vocoder artefacts --- motivated a shift toward deep learning approaches that learn richer acoustic representations directly from data. This transition unfolded in several stages: first replacing individual SPSS components with neural networks, then developing fully neural vocoders, and finally building systems that map text to waveforms within a single model.
+
+\subsubsection{Early DNN-Based Acoustic Models}
+
+The first wave of neural TTS research retained the overall SPSS pipeline structure but replaced the HMM output distributions with deep neural networks (DNNs)~\cite{zen2013statistical}. A feed-forward DNN maps a linguistic feature vector --- encoding phoneme identity, position, stress, and sentential context --- directly to acoustic feature vectors, bypassing the need for decision-tree clustering. Training by minimising mean squared error over acoustic parameters produced smoother predictions than HMMs, but frame-independent DNN predictions still averaged over the training distribution and therefore suffered from the same over-smoothing problem.
+
+Subsequent work introduced recurrent architectures, particularly Long Short-Term Memory (LSTM) networks, to model temporal dependencies across frames. RNN-based acoustic models produced more coherent parameter trajectories and established sequence-to-sequence modelling as the central paradigm for neural TTS~\cite{zen2013statistical}.
+
+\subsubsection{Neural Vocoders}
+
+Parallel to the development of neural acoustic models, a separate line of research addressed waveform reconstruction. Traditional vocoders (STRAIGHT, WORLD) introduce characteristic buzziness through their source--filter decomposition; neural vocoders instead learn to generate waveforms directly from an acoustic conditioning signal.
+
+\paragraph{Autoregressive vocoders.}
+WaveNet~\cite{oord2016wavenet}, proposed by van den Oord et al., was the first neural vocoder to match the naturalness of real recordings in listening tests. It is an autoregressive model that generates each audio sample conditioned on all previous samples and on a local acoustic conditioning signal, using stacks of dilated causal convolutions to maintain a large receptive field without excessive depth. Despite its quality, WaveNet is computationally expensive: synthesising one second of 16~kHz audio requires 16,000 sequential forward passes through the network.
+
+WaveRNN~\cite{kalchbrenner2018efficient} reduced this cost by replacing the convolutional stack with a single gated recurrent unit operating on quantised samples, combined with subscale prediction and sparsification techniques, achieving real-time synthesis on mobile hardware.
+
+\paragraph{Non-autoregressive vocoders.}
+To eliminate sequential generation entirely, flow-based and generative adversarial network (GAN) architectures were developed. WaveGlow~\cite{prenger2019waveglow} uses normalising flows --- a sequence of invertible transformations with tractable Jacobians --- to transform a Gaussian noise vector into a waveform in a single forward pass conditioned on a mel-spectrogram, trained by directly maximising the data log-likelihood.
+
+GAN-based vocoders pushed quality and speed further. MelGAN~\cite{kumar2019melgan} introduced a fully convolutional generator conditioned on mel-spectrograms and trained adversarially against multi-scale discriminators operating at different temporal resolutions. HiFi-GAN~\cite{kong2020hifi} extended this design with multi-period discriminators that explicitly model periodic structures in speech, and a multi-receptive-field fusion generator that processes waveforms at multiple pattern lengths simultaneously. HiFi-GAN produces audio quality comparable to WaveNet while running orders of magnitude faster than real time, and has become the de facto standard vocoder in modern TTS pipelines.
+
+\subsubsection{Two-Step TTS Pipelines}
+
+Combining a neural acoustic model (predicting mel-spectrograms from text) with a neural vocoder (reconstructing waveforms from mel-spectrograms) defines the dominant two-step TTS architecture. The two components are trained independently, which gives flexibility --- either part can be improved or replaced without retraining the other --- but also means the acoustic model is optimised for spectrogram reconstruction loss rather than perceptual waveform quality.
+
+\paragraph{Autoregressive acoustic models.}
+Tacotron~\cite{wang2017tacotron} was the first sequence-to-sequence acoustic model to synthesise intelligible speech directly from characters. It uses an encoder--attention--decoder architecture in which a content-based attention mechanism learns the monotonic alignment between input characters and output spectrogram frames, eliminating the need for hand-crafted phoneme dictionaries or explicit duration models. The decoder predicts spectrogram frames autoregressively, one or more at each step.
+
+Tacotron~2~\cite{shen2018natural} refined this design with a more stable decoder and conditioned WaveNet directly on predicted mel-spectrograms, achieving a mean opinion score (MOS) close to that of natural speech. The autoregressive decoder nevertheless generates frames sequentially, making synthesis latency proportional to utterance length and making the model sensitive to alignment failures on longer or unusual inputs.
+
+\paragraph{Non-autoregressive acoustic models.}
+FastSpeech~\cite{ren2019fastspeech} addressed the latency and robustness limitations of autoregressive decoders by introducing a feed-forward Transformer that generates all output frames in parallel. A duration predictor, trained with durations extracted from a pre-trained Tacotron teacher model, determines how many frames each input phoneme should expand to. The phoneme representations are expanded accordingly and processed by a parallel Transformer decoder. FastSpeech achieved approximately 38-times faster spectrogram generation than Tacotron~2 with comparable perceptual quality.
+
+FastSpeech~2~\cite{ren2021fastspeech} removed the dependence on a teacher model by predicting pitch, energy, and duration directly from the phoneme encoder output using dedicated variance predictors, trained with ground-truth values extracted from the training data. The explicit prosodic variables also enable controllable synthesis, allowing independent adjustment of speaking rate, pitch range, and energy at inference time.
+
+\subsubsection{End-to-End Models}
+
+Training the acoustic model and vocoder independently introduces a train--test mismatch: the vocoder is conditioned on natural mel-spectrograms during training but on predicted, imperfect ones at inference. End-to-end models eliminate this mismatch by jointly optimising the full pipeline from text to waveform.
+
+VITS (Variational Inference with adversarial learning for Text-to-Speech)~\cite{kim2021conditional} is the most widely adopted single-stage model. It combines a variational autoencoder (VAE), a normalising flow network, and adversarial training within a unified framework. A posterior encoder maps a mel-spectrogram to a latent representation; a flow-based prior network learns the conditional distribution of latent variables given the text; and a HiFi-GAN decoder generates the waveform from the sampled latent. The adversarial loss and reconstruction loss are optimised jointly, so the decoder is trained on its own outputs from the start and the prior network is pushed to match the true posterior. At inference, the prior network samples a latent variable conditioned only on the input text and the decoder synthesises the waveform directly, with no intermediate spectrogram. VITS achieved higher MOS scores than Tacotron~2 with WaveGlow in subjective evaluations while producing speech in a single forward pass.
 
 %\sectionnonum{Rezultatai}
 %Rezultatų skyriuje išdėstomi pagrindiniai darbo rezultatai: kažkas išanalizuota,
