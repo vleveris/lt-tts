@@ -179,13 +179,10 @@ However, the statistical averaging used in training produces over-smoothed outpu
 \subsection{Emergence of Neural TTS Systems}
 \label{sec:neural}
 
-The limitations of statistical parametric synthesis --- over-smoothed output and vocoder artifacts --- led to deep learning approaches that learn richer acoustic representations directly from data. This transition happened in stages: first replacing individual SPSS components with neural networks, then developing fully neural vocoders, and finally building systems that map text to waveforms in a single model.
+The limitations of statistical parametric synthesis such as over-smoothed output and vocoder artifacts led to deep learning approaches that learn richer acoustic representations directly from data. This transition happened in stages: first replacing individual SPSS components with neural networks, then developing fully neural vocoders, and finally building systems that map text to waveforms in a single model. Progress in neural network research, combined with greater availability of computational power and resources, particularly the bincreasing popularity of GPUs for training, enabled the creation of several TTS neural network architectures that outperformed traditional methods. In this section we will present the main neural architectures and their evolution. But before that it's necessary to introduce some basic concepts of neural networks relevant to TTS generation.
 
-\subsubsection{Early DNN-Based Acoustic Models}
+\subsubsection{Acoustic and Vocoder Models}
 
-The first neural TTS systems kept the SPSS pipeline but replaced HMM output distributions with deep neural networks (DNNs)~\cite{zen2013statistical}. A feed-forward DNN maps a linguistic feature vector --- encoding phoneme identity, position, stress, and sentence context --- directly to acoustic features, removing the need for decision-tree clustering. Training with mean squared error loss produced smoother predictions than HMM, but since each frame was predicted independently, the over-smoothing problem remained.
-
-Later work introduced recurrent architectures, especially Long Short-Term Memory (LSTM) networks, to capture dependencies across frames. RNN-based acoustic models produced more coherent output and established sequence-to-sequence modeling as the main approach for neural TTS~\cite{zen2013statistical}.
 
 \subsubsection{Neural Vocoders}
 
