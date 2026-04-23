@@ -183,6 +183,17 @@ The limitations of statistical parametric synthesis such as over-smoothed output
 
 \subsubsection{Two-Stage TTS Models}
 
+Traditional speech synthesis software relied on a hand-crafted front-end to extract linguistic features from text, paired with an explicit duration model and a signal-processing-based vocoder~\cite{}. Neural networks initially entered this field by replacing individual components but still preserving the overall two-stage structure, and that structure remains popular today.
+
+In such a pipeline, an \emph{acoustic model} takes text (or phoneme sequences) as input and produces intermediate acoustic features. The most common representation is the mel-spectrogram: a time-frequency map of spectral energy computed on a perceptually-motivated frequency scale. The acoustic model therefore performs a text-to-spectrogram conversion. A separate \emph{vocoder} then converts those acoustic features into a time-domain audio waveform, performing the inverse spectrogram-to-waveform step.
+
+Mel-spectrograms are a natural intermediate representation because they are compact, closely related to how humans perceive sound, and easier to predict accurately than raw waveforms. However, the two-component decomposition also introduces trade-offs. Because the acoustic model and the vocoder are trained independently, the vocoder is exposed to ground-truth mel-spectrograms during training, but at inference it receives predicted ones. This \emph{train--test mismatch} can introduce artifacts. Furthermore, keeping two separate training pipelines increases overall training / inference time and complicates deployment.
+
+Despite these limitations, the acoustic model and vocoder paradigm produced highly natural-sounding speech and drove rapid progress in TTS field.
+
+\subsubsection{Main TTS Models, Architectures and Their Evolution}
+>>>>>>> 39b511896efc897afd1b925109c518ce4ec95b6f
+
 Traditional speech synthesis software relied on a hand-crafted front-end to extract linguistic features from text, paired with an explicit duration model and a signal-processing-based vocoder. Neural networks initially entered this field by replacing individual components but still preserving the overall two-stage structure, and that structure remains popular today.
 
 In such a pipeline, an \emph{acoustic model} takes text (or phoneme sequences) as input and produces intermediate acoustic features. The most common representation is the mel-spectrogram: a time-frequency map of spectral energy computed on a perceptually-motivated frequency scale. The acoustic model therefore performs a text-to-spectrogram conversion. A separate \emph{vocoder} then converts those acoustic features into a time-domain audio waveform, performing the inverse spectrogram-to-waveform step.
