@@ -232,7 +232,7 @@ It is the most popular among autoregressive models, based on recurrent neural ne
 By learning the alignment between text and spectrogram frames through a soft attention mechanism, Tacotron eliminated the need for explicit phoneme dictionaries or duration models.
 It can synthesize speech directly from text characters.
 However, attention-based alignment is fragile: the model can lose track of its position and produce repeated or skipped words, especially on longer sequences.
-Training and inference is slow, because The decoder predicts frames one at a time sequentially.
+Training and inference are slow, because the decoder predicts frames one at a time sequentially.
 The original Tacotron relied on the Griffin--Lim vocoder algorithm to invert spectrograms to audio, which introduced a characteristic synthetic quality unrelated to the acoustic model's accuracy.
 If specific texts were not used during training, the model can fail to generalize and produces unintelligible output.
 Authors of Tacotron paper agreed that vocoder part is the thing to be improved for better quality of the output audio.
@@ -245,14 +245,14 @@ The algorithm for generating mel-spectrograms using feature-prediction architect
 This model introduced a post-processing network to refine the generated Mel spectrogram, which in turn elevated the overall speech quality.
 It was presented the same year as the original Tacotron model - in 2018.
 This modified version of Tacotron outperformed the best parametric and concatenative TTS systems of that time, reaching a mean opinion score (MOS) close to natural speech.
-It's very popular and widely used even today because of its sumplicity for training and good audio quality.
+It's very popular and widely used even today because of its simplicity for training and good audio quality.
 The major problem was inference speed: WaveNet generates one sample at a time, making real-time synthesis impractical without significant hardware acceleration.
 The two-model pipeline also means the acoustic model is trained to minimise spectrogram prediction error, not perceptual audio quality - a mismatch that persists at inference.
 Also, the attention-based alignment still remains fragile, and the model can fail on longer or unusual inputs.
 NVIDIA developed its own implementation of Tacotron~2 by utilizing a WaveGlow instead of the original WaveNet, but the system was still relatively slow and especially struggled with longer sequences.
 
-\paragraph{Transformer-based Models.}
-Before discussing the Transformer-based TTS systems, it is worth briefly explaining what a Transformer actually is.
+\paragraph{Transformer TTS.}
+Before describing Transformer TTS, it is worth briefly explaining what a Transformer actually is.
 The Transformer is a type of neural network architecture introduced in 2017~\cite{vaswani2017attention} that quickly became the dominant approach in natural language processing and, soon after, in many other areas of deep learning.
 Unlike recurrent neural networks, which read a sequence one element at a time and pass information forward step by step, a Transformer looks at the entire input sequence at once.
 Its key idea is a mechanism called \emph{self-attention}, which lets every position in the sequence directly compare itself with every other position and decide which ones are most relevant.
@@ -274,13 +274,13 @@ Mel-spectrogram frames are still produced one after another, so synthesis time g
 The learned attention is also fragile: on long or unusual inputs, the model can lose track of its position and produce skipped or repeated words, unintelligible passages, or premature silence.
 Finally, these systems offer little explicit control over prosody, since duration, pitch and energy emerge implicitly from the attention mechanism rather than from dedicated predictors.
 
-\subsubsubsection{Non-autoregressive Acoustic Models}
-
 Subsequent work such as Parallel WaveNet~\cite{oord2018parallel}, ClariNet~\cite{ping2018clarinet} and WaveGlow~\cite{prenger2019waveglow} addressed part of the problems of transformer-based and autoregressive models by replacing the slow WaveNet vocoder with much faster non-autoregressive alternatives.
 However, these are only improved external vocoders.
 They still need to be conditioned on mel-spectrograms produced by an autoregressive acoustic model.
 As long as the spectrogram itself is generated frame by frame, the overall pipeline cannot become truly fast or robust.
 To remove this final bottleneck, researchers turned to non-autoregressive acoustic models that generate all mel-frames in parallel.
+
+\subsubsubsection{Non-autoregressive Acoustic Models}
 
 Non-autoregressive acoustic models take a fundamentally different approach to spectrogram generation.
 Instead of producing mel-frames one after another, where each frame depends on the previously generated ones, they output all frames at the same time in a single forward pass.
@@ -289,7 +289,7 @@ The encoded text representation is then stretched according to the predicted dur
 
 This shift brings several practical advantages.
 Inference becomes much faster, since synthesis time no longer grows linearly with utterance length and modern GPUs can process all frames in parallel.
-The models are also more robust: because alignment between text and frames is decided by the duration predictor rather than by an attention mechanism unfolding over time, the typical autoregressive failure modes like skipped or repeated words, premature silence or attention collapse  largely disappear.
+The models are also more robust: because alignment between text and frames is decided by the duration predictor rather than by an attention mechanism unfolding over time, the typical autoregressive failure modes such as skipped or repeated words, premature silence or attention collapse largely disappear.
 Finally, separating duration (and often pitch and energy) into dedicated predictors makes prosody explicitly controllable at inference time~\cite{kim2021conditional}.
 The trade-off is that these models depend on accurate duration information during training, which is either obtained from a teacher autoregressive model or extracted from forced alignments of the training data.
 
@@ -304,19 +304,19 @@ It inspired a whole family of non-autoregressive TTS models that followed.
 
 The drawback is that the duration predictor must be trained on alignments extracted from a teacher autoregressive model, creating an indirect dependency on Tacotron-style systems.
 Also, since it is an acoustic model, it still relies on a separately trained external vocoder to produce audio.
-The training process of dependency parsing is further complicated by its need on a pre-existing model for aligning the data.
+Training of duration predictor is further complicated by its need on a pre-existing model for aligning the data.
 Certain critiques raise the possibility of a trade-off in terms of expressiveness when comparing to attention-based alternatives~\cite{ren2020fastspeech}.
 
 \paragraph{FastSpeech~2.}
 FastSpeech~2~\cite{ren2020fastspeech} was developed to address issues left unanswered by its predecessor.
 Due to its non-autoregressive and deterministic nature, FastSpeech had limited prosody and expressiveness.
-Although the speach was synthesized faster, but voice quality lacked naturalness.
-As the main challenges of text-to-waveform generation, authors provided a big information gap between input (phonemes) and output (mel-spectrograms), and difficult training because of a long output frames and limited GPU memory.
-In FastSpeech~2, authors added modified stronger duration predictor and two additional predictors for pitch and energy, which were trained directly on ground-truth phoneme annotations rather than relying on a teacher model.
+Although the speech was synthesized faster, voice quality lacked naturalness.
+As the main challenges of text-to-waveform generation, authors identified a big information gap between input (phonemes) and output (mel-spectrograms), and difficult training because of long output sequences and limited GPU memory.
+In FastSpeech~2, authors added a modified, stronger duration predictor and two additional predictors for pitch and energy, which were trained directly on ground-truth phoneme annotations rather than relying on a teacher model.
 These features improved speech temporal properties and fine-grained prosodic controllability, naturalness and dynamics as an additional benefit.
 Explicit prosodic controls also allow adjusting speaking rate, pitch, and energy independently at inference time.
 
-However, FastSpeech~2 requires third-party tool to generate phoneme alignments for training the duration predictor, which is problematic for low resource languages like Lithuanian, because there are not many tools to convert text characters to phonemes.
+However, FastSpeech~2 requires a third-party tool to generate phoneme alignments for training the duration predictor, which is problematic for low resource languages like Lithuanian, because there are not many tools to convert text characters to phonemes.
 It still relies on a separately trained vocoder to produce audio.
 The model is also more complex than FastSpeech, with multiple predictors and loss functions that require careful tuning.
 
@@ -324,7 +324,7 @@ The model is also more complex than FastSpeech, with multiple predictors and los
 Glow-TTS~\cite{kim2020glow} learns a monotonic alignment between phonemes and mel-spectrogram frames using a dynamic programming search, without any external aligner, based on normalizing flows.
 The flow-based decoder allows exact likelihood training and fast, high-quality synthesis.
 Because the alignment is learned internally and respects the left-to-right order of speech, the model is inherently robust to word skipping.
-Glow-TTS demonstrated that self-learned alignment could match the quality of attention-based models while offering better quality.
+Glow-TTS demonstrated that self-learned alignment could match the quality of attention-based models while offering better robustness and removing the need for a separately trained teacher model.
 Like most acoustic models of its era, it still requires a separately trained vocoder to produce audio.
 
 \subsubsection{End-to-end Models}
