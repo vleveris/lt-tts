@@ -179,75 +179,174 @@ However, the statistical averaging used in training produces over-smoothed outpu
 \subsection{Emergence of Neural TTS Systems}
 \label{sec:neural}
 
-The limitations of statistical parametric synthesis such as over-smoothed output and vocoder artifacts led to deep learning approaches that learn richer acoustic representations directly from data. This transition happened in stages: first replacing individual SPSS components with neural networks, then developing fully neural vocoders, and finally building systems that map text to waveforms in a single model. Progress in neural network research, combined with greater availability of computational power and resources, particularly the increasing popularity of GPUs for training, enabled the creation of several TTS neural network architectures that outperformed traditional methods. In this section we will present the main neural architectures and their evolution. But before that it's necessary to introduce some basic concepts of neural networks relevant to TTS generation.
+The limitations of statistical parametric synthesis such as over-smoothed output and vocoder artifacts led to deep learning approaches that learn richer acoustic representations directly from data.
+This transition happened in stages: first replacing individual SPSS components with neural networks, then developing fully neural vocoders, and finally building systems that map text to waveforms in a single model.
+Progress in neural network research, combined with greater availability of computational power and resources, particularly the increasing popularity of GPUs for training, enabled the creation of several TTS neural network architectures that outperformed traditional methods.
+The progression of neural TTS architectures can be understood as a series of deliberate trade-offs between quality, speed, simplicity, and controllability.
+Rather than a single breakthrough, the field evolved incrementally - each generation addressing the hardest limitations of the previous one.
+
+In this section we will present the main neural architectures and their evolution.
 
 \subsubsection{Two-Stage TTS Models}
 
-Traditional speech synthesis software relied on a hand-crafted front-end to extract linguistic features from text, paired with an explicit duration model and a signal-processing-based vocoder. Neural networks initially entered this field by replacing individual components but still preserving the overall two-stage structure, and that structure remains popular today.
+Traditional speech synthesis software relied on a hand-crafted front-end to extract linguistic features from text, paired with an explicit duration model and a signal-processing-based vocoder.
+Neural networks initially entered this field by replacing individual components but still preserving the overall two-stage structure, and that structure remains popular today.
 
-In such a pipeline, an \emph{acoustic model} takes text (or phoneme sequences) as input and produces intermediate acoustic features. The most common representation is the mel-spectrogram: a time-frequency map of spectral energy computed on a perceptually-motivated frequency scale. The acoustic model therefore performs a text-to-spectrogram conversion. A separate \emph{vocoder} then converts those acoustic features into a time-domain audio waveform, performing the inverse spectrogram-to-waveform step.
+In such a pipeline, an \emph{acoustic model} takes text (or phoneme sequences) as input and produces intermediate acoustic features.
+The most common representation is the mel-spectrogram: a time-frequency map of spectral energy computed on a perceptually-motivated frequency scale.
+The acoustic model therefore performs a text-to-spectrogram conversion.
+A separate \emph{vocoder} model then converts those acoustic features into a time-domain audio waveform, performing the inverse spectrogram-to-waveform step.
+Mel-spectrograms are a natural intermediate representation because they are compact, closely related to how humans perceive sound, and easier to predict accurately than raw waveforms.
 
-Mel-spectrograms are a natural intermediate representation because they are compact, closely related to how humans perceive sound, and easier to predict accurately than raw waveforms. However, the two-component decomposition also introduces trade-offs. Because the acoustic model and the vocoder are trained independently, the vocoder is exposed to ground-truth mel-spectrograms during training, but at inference it receives predicted ones. This \emph{train--test mismatch} can introduce artifacts. Furthermore, keeping two separate training pipelines increases overall training / inference time and complicates deployment.
+Some of the early neural TTS models can be called multi-stage models if several other intermediate layers are used, for example, a separate frontend model for text preprocessing, but the two main classical components are the acoustic model and the vocoder.
+
+The two-component decomposition introduces trade-offs.
+Because the acoustic model and the vocoder are trained independently, the vocoder is exposed to ground-truth mel-spectrograms during training, but at inference it receives predicted ones, meaning the acoustic model is optimized for spectrogram accuracy rather than final audio quality.
+This train-test mismatch can introduce artifacts.
+Furthermore, keeping two separate training pipelines increases overall training / inference time and complicates deployment.
 
 Despite these limitations, the acoustic model and vocoder paradigm produced highly natural-sounding speech and drove rapid progress in TTS field.
 
-\subsubsection{Main TTS Models, Architectures and Their Evolution}
-
-The progression of neural TTS architectures can be understood as a series of deliberate trade-offs between quality, speed, simplicity, and controllability. Rather than a single breakthrough, the field evolved incrementally - each generation addressing the hardest pressing limitations of the previous one.
-
 \subsubsubsection{Early neural approaches}
 
-The earliest neural TTS systems, such as those inspired by the DeepSpeech line of work~\cite{hannun2014deep}, replaced the rule-based components of traditional pipelines with neural sub-modules while keeping the overall multi-stage structure the same. A neural front-end extracted linguistic features, a separate neural acoustic model predicted acoustic parameters, and a classical vocoder reconstructed the waveform. Although this approach improved naturalness over HMM-based SPSS, it preserved the fundamental weaknesses of modular design: each component required independent training, errors from earlier stages generated more errors in later ones, and the overall system was difficult to improve.
+The earliest neural TTS systems, such as those inspired by the DeepSpeech line of work~\cite{hannun2014deep}, replaced the rule-based components of traditional pipelines with neural sub-modules while keeping the overall multi-stage structure the same.
+A neural front-end extracted linguistic features, a separate neural acoustic model predicted acoustic parameters, and a classical vocoder reconstructed the waveform.
+Although this approach improved naturalness over HMM-based SPSS, it preserved the fundamental weaknesses of modular design:
+each component required independent training, errors from earlier stages generated more errors in later ones, and the overall system was difficult to improve.
 
 \subsubsubsection{Autoregressive Acoustic Models}
 
-Even a single second of audio data contains more than 22000 samples. A lot of computational resources are required for a neural network model to predict such a sequence sample by sample. Models that are dependent on previously generated outputs in a sequence are called autoregressive models~\cite{akaike1971autoregressive}. Autoregressive acoustic models generate the output spectrogram one frame at a time, where each predicted frame is conditioned on all previously generated frames together with the input text. This sequential formulation matches the natural left-to-right structure of speech and makes it straightforward to model dependencies between neighbouring frames, which contributes to smooth transitions and natural-sounding prosody. Most autoregressive systems are built around an encoder--decoder architecture coupled with an attention mechanism that learns a soft alignment between the input text and the output frames, removing the need for explicit duration modelling or external aligners.
+Even a single second of audio data contains more than 22000 samples.
+A lot of computational resources are required for a neural network model to predict such a sequence sample by sample.
+Models that are dependent on previously generated outputs in a sequence are called autoregressive models~\cite{akaike1971autoregressive}.
+Autoregressive acoustic models generate the output spectrogram one frame at a time, where each predicted frame is conditioned on all previously generated frames together with the input text.
+This sequential formulation matches the natural left-to-right structure of speech and makes it straightforward to model dependencies between neighbouring frames, which contributes to smooth transitions and natural-sounding prosody.
+Most autoregressive systems are built around an encoder--decoder architecture coupled with an attention mechanism that learns a soft alignment between the input text and the output frames, removing the need for explicit duration modelling or external aligners.
 
-The main strength of this family of models is the high perceptual quality they can achieve with relatively simple training objectives. The downsides follow directly from the sequential decoding: synthesis time grows linearly with utterance length, so real-time inference is difficult, and the learned attention can drift or collapse on long or unusual inputs, leading to skipped words, repeated syllables, or premature termination. These limitations motivated much of the subsequent research into non-autoregressive and end-to-end alternatives.
+The main strength of this family of models is the high perceptual quality they can achieve with relatively simple training objectives.
+The downsides follow directly from the sequential decoding: synthesis time grows linearly with utterance length, so real-time inference is difficult, and the learned attention can drift or collapse on long or unusual inputs, leading to skipped words, repeated syllables, or premature termination.
 
-A huge impact came with Tacotron~\cite{wang2017tacotron}, developed by Google research team, which replaced the hand-crafted front-end with a single encoder--attention--decoder network trained on character-audio pairs. It is the most popular among autoregressive models, based on recurrent neural networks, or, more precisely, on gated recurrent units (GRU)~\cite{cho2014learning} and a modified sequence-to-sequence architecture~\cite{sutskever2014sequence}. By learning the alignment between text and spectrogram frames through a soft attention mechanism, Tacotron eliminated the need for explicit phoneme dictionaries or duration models. It can synthesize speech directly from text characters. However, attention-based alignment is fragile: the model can lose track of its position and produce repeated or skipped words, especially on longer sequences. Training and inference is slow, because The decoder predicts frames one at a time, sequentially. The original Tacotron relied on the Griffin--Lim vocoder algorithm to invert spectrograms to audio, which introduced a characteristic synthetic quality unrelated to the acoustic model's accuracy. If specific texts were not used during training, the model can fail to generalize and produces unintelligible output. Authors of Tacotron paper agreed that vocoder part is the thing to be improved for better quality of the output audio.
+A huge impact came with Tacotron~\cite{wang2017tacotron}, developed by Google research team, which replaced the hand-crafted front-end with a single encoder-attention-decoder network trained on character-audio pairs.
+It is the most popular among autoregressive models, based on recurrent neural networks, or, more precisely, on gated recurrent units (GRU)~\cite{cho2014learning} and a modified sequence-to-sequence architecture~\cite{sutskever2014sequence}.
+By learning the alignment between text and spectrogram frames through a soft attention mechanism, Tacotron eliminated the need for explicit phoneme dictionaries or duration models.
+It can synthesize speech directly from text characters.
+However, attention-based alignment is fragile: the model can lose track of its position and produce repeated or skipped words, especially on longer sequences.
+Training and inference is slow, because The decoder predicts frames one at a time sequentially.
+The original Tacotron relied on the Griffin--Lim vocoder algorithm to invert spectrograms to audio, which introduced a characteristic synthetic quality unrelated to the acoustic model's accuracy.
+If specific texts were not used during training, the model can fail to generalize and produces unintelligible output.
+Authors of Tacotron paper agreed that vocoder part is the thing to be improved for better quality of the output audio.
 
-Tacotron~2~\cite{shen2018natural}, a successor to the original Tacotron, addressed the vocoder bottleneck by substituting Griffin--Lim with a modified WaveNet~\cite{oord2016wavenet} conditioned on mel-spectrograms rather than on linguistic features. One of its standout enhancements was in its structural design. The encoder in Tacotron~2 integrated a higher number of convolutional layers, allowing it to better capture text features, particularly beneficial for longer text. The algorithm for generating mel-spectrograms using feature-prediction architecture was slightly changed as well. This model introduced a post-processing network to refine the generated Mel spectrogram, which in turn elevated the overal speech quality. It was presented the same year as the original Tacotron model - in 2018. This modified version of Tacotron outperformed the best parametric and concatenative TTS systems of that time, reaching a mean opinion score (MOS) close to natural speech. It's very popular and widely used even today because of its sumplicity for training and good audio quality. The major problem was inference speed: WaveNet generates one sample at a time, making real-time synthesis impractical without significant hardware acceleration. The two-model pipeline also means the acoustic model is trained to minimise spectrogram prediction error, not perceptual audio quality - a mismatch that persists at inference. Also, the attention-based alignment still remains fragile, and the model can fail on longer or unusual inputs.
+Tacotron~2~\cite{shen2018natural}, a successor to the original Tacotron, addressed the vocoder bottleneck by substituting Griffin--Lim with a modified WaveNet~\cite{oord2016wavenet} conditioned on mel-spectrograms rather than on linguistic features.
+One of its standout enhancements was in its structural design.
+The encoder in Tacotron~2 integrated a higher number of convolutional layers, allowing it to better capture text features, particularly beneficial for longer text.
+The algorithm for generating mel-spectrograms using feature-prediction architecture was slightly changed as well.
+This model introduced a post-processing network to refine the generated Mel spectrogram, which in turn elevated the overall speech quality.
+It was presented the same year as the original Tacotron model - in 2018.
+This modified version of Tacotron outperformed the best parametric and concatenative TTS systems of that time, reaching a mean opinion score (MOS) close to natural speech.
+It's very popular and widely used even today because of its sumplicity for training and good audio quality.
+The major problem was inference speed: WaveNet generates one sample at a time, making real-time synthesis impractical without significant hardware acceleration.
+The two-model pipeline also means the acoustic model is trained to minimise spectrogram prediction error, not perceptual audio quality - a mismatch that persists at inference.
+Also, the attention-based alignment still remains fragile, and the model can fail on longer or unusual inputs.
 NVIDIA developed its own implementation of Tacotron~2 by utilizing a WaveGlow instead of the original WaveNet, but the system was still relatively slow and especially struggled with longer sequences.
 
 \subsubsubsection{Transformer-based Models}
 
-Before discussing the Transformer-based TTS systems, it is worth briefly explaining what a Transformer actually is. The Transformer is a type of neural network architecture introduced in 2017~\cite{vaswani2017attention} that quickly became the dominant approach in natural language processing and, soon after, in many other areas of deep learning. Unlike recurrent neural networks, which read a sequence one element at a time and pass information forward step by step, a Transformer looks at the entire input sequence at once. Its key idea is a mechanism called \emph{self-attention}, which lets every position in the sequence directly compare itself with every other position and decide which ones are most relevant. In simple terms, when the model is processing a particular word, character or phoneme, self-attention helps it ask: \enquote{which other parts of the input matter for understanding this one?}, and weight them accordingly.
+Before discussing the Transformer-based TTS systems, it is worth briefly explaining what a Transformer actually is.
+The Transformer is a type of neural network architecture introduced in 2017~\cite{vaswani2017attention} that quickly became the dominant approach in natural language processing and, soon after, in many other areas of deep learning.
+Unlike recurrent neural networks, which read a sequence one element at a time and pass information forward step by step, a Transformer looks at the entire input sequence at once.
+Its key idea is a mechanism called \emph{self-attention}, which lets every position in the sequence directly compare itself with every other position and decide which ones are most relevant.
+When the model is processing a particular word, character or phoneme, self-attention helps it categorize the particular symbol by comparing it to the other symbols using all input as context, and weight them accordingly.
 
-This design has two important practical consequences. First, because all positions are processed in parallel rather than one after another, Transformers train much faster than recurrent networks on modern hardware such as GPUs. Second, the model can easily capture relationships between distant parts of a sequence, since any two positions are only one attention step apart. These properties make Transformers especially attractive for tasks like TTS, where the pronunciation of a word can depend on context far away in the sentence.
+This design has two important practical consequences.
+First, because all positions are processed in parallel rather than one after another, Transformers train much faster than recurrent networks on modern hardware such as GPUs.
+Second, the model can easily capture relationships between distant parts of a sequence, since any two positions are only one attention step apart.
+These properties make Transformers especially attractive for tasks like TTS, where the pronunciation of a word can depend on context far away in the sentence.
 
-Once Transformer architectures proved effective in natural language processing, they were applied to TTS. Transformer TTS~\cite{li2019neural} replaced the recurrent layers in Tacotron with multi-head self-attention, enabling more parallelism during training and better modelling of long-range dependencies in text. authors use phoneme sequences as inputs to the model to solve pronunciation problems. Training was faster and the model generalised somewhat better to unusual phrasing, but inference remained autoregressive and therefore slow. Like Tacotron~2, it still relied on an external vocoder and was susceptible to attention collapse on long utterances.
+Once Transformer architectures proved effective in natural language processing, they were applied to TTS.
+Transformer TTS~\cite{li2019neural} replaced the recurrent layers in Tacotron with multi-head self-attention, enabling more parallelism during training and better modelling of long-range dependencies in text.
+Authors use phoneme sequences as inputs to the model to solve pronunciation problems.
+Training was faster and the model generalised somewhat better to unusual phrasing, but inference remained autoregressive and therefore slow.
+Like Tacotron~2, it still relied on an external vocoder and was susceptible to attention collapse on long utterances.
 
-Despite the architectural differences between recurrent and Transformer-based TTS systems, they share the same fundamental limitations that come from their autoregressive nature. Mel-spectrogram frames are still produced one after another, so synthesis time grows linearly with the length of the utterance and real-time generation is hard to achieve, especially for longer sentences. The learned attention is also fragile: on long or unusual inputs, the model can lose track of its position and produce skipped or repeated words, unintelligible passages, or premature silence. Finally, these systems offer little explicit control over prosody, since duration, pitch and energy emerge implicitly from the attention mechanism rather than from dedicated predictors.
+Despite the architectural differences between recurrent and Transformer-based TTS systems, they share the same fundamental limitations that come from their autoregressive nature.
+Mel-spectrogram frames are still produced one after another, so synthesis time grows linearly with the length of the utterance and real-time generation is hard to achieve, especially for longer sentences.
+The learned attention is also fragile: on long or unusual inputs, the model can lose track of its position and produce skipped or repeated words, unintelligible passages, or premature silence.
+Finally, these systems offer little explicit control over prosody, since duration, pitch and energy emerge implicitly from the attention mechanism rather than from dedicated predictors.
 
-Subsequent work such as Parallel WaveNet~\cite{oord2018parallel}, ClariNet~\cite{ping2018clarinet} and WaveGlow~\cite{prenger2019waveglow} addressed part of this picture by replacing the slow WaveNet vocoder with much faster non-autoregressive alternatives. However, these are improved external vocoders only — they still need to be conditioned on mel-spectrograms produced by an autoregressive acoustic model. As long as the spectrogram itself is generated frame by frame, the overall pipeline cannot become truly fast or robust. To remove this final bottleneck, researchers turned to non-autoregressive acoustic models that generate all mel-frames in parallel.
+Subsequent work such as Parallel WaveNet~\cite{oord2018parallel}, ClariNet~\cite{ping2018clarinet} and WaveGlow~\cite{prenger2019waveglow} addressed part of this picture by replacing the slow WaveNet vocoder with much faster non-autoregressive alternatives.
+However, these are only improved external vocoders.
+They still need to be conditioned on mel-spectrograms produced by an autoregressive acoustic model.
+As long as the spectrogram itself is generated frame by frame, the overall pipeline cannot become truly fast or robust.
+To remove this final bottleneck, researchers turned to non-autoregressive acoustic models that generate all mel-frames in parallel.
 
 \subsubsubsection{Non-autoregressive Acoustic Models}
 
-The inference bottleneck of autoregressive decoders motivated a new class of models that generate all spectrogram frames simultaneously. FastSpeech~\cite{ren2019fastspeech} introduced a feed-forward Transformer with a duration predictor, enabling parallel decoding and making synthesis roughly 38 times faster than Tacotron~2. Because duration is predicted explicitly rather than learned through attention, FastSpeech is also far more robust: it does not skip or repeat words. The drawback is that the duration predictor must be trained on alignments extracted from a teacher autoregressive model, creating an indirect dependency on Tacotron-style systems. FastSpeech~2~\cite{ren2021fastspeech} removed this dependency by training duration, pitch, and energy predictors directly from ground-truth annotations, adding fine-grained prosodic controllability as an additional benefit.
+Non-autoregressive acoustic models take a fundamentally different approach to spectrogram generation.
+Instead of producing mel-frames one after another, where each frame depends on the previously generated ones, they output all frames at the same time in a single forward pass.
+To do this, the model must know in advance how many frames each input symbol (typically a phoneme or character) should expand into, which is handled by an explicit \emph{duration predictor}.
+The encoded text representation is then stretched according to the predicted durations and passed to a parallel decoder that emits the full mel-spectrogram in one step.
 
-\paragraph{Flow-based models and internal alignment.}
-A different family of models addresses the alignment problem through normalizing flows. Glow-TTS~\cite{kim2020glow} learns a monotonic alignment between phonemes and mel-spectrogram frames using a dynamic programming search, without any external aligner. The flow-based decoder allows exact likelihood training and fast, high-quality synthesis. Critically, because the alignment is learned internally and respects the left-to-right order of speech, the model is inherently robust to word skipping. Glow-TTS demonstrated that self-learned alignment could match the quality of attention-based models while offering much better robustness. Like most acoustic models of its era, it still requires a separately trained vocoder to produce audio.
+This shift brings several practical advantages.
+Inference becomes much faster, since synthesis time no longer grows linearly with utterance length and modern GPUs can process all frames in parallel.
+The models are also more robust: because alignment between text and frames is decided by the duration predictor rather than by an attention mechanism unfolding over time, the typical autoregressive failure modes like skipped or repeated words, premature silence or attention collapse  largely disappear.
+Finally, separating duration (and often pitch and energy) into dedicated predictors makes prosody explicitly controllable at inference time~\cite{kim2021conditional}.
+The trade-off is that these models depend on accurate duration information during training, which is either obtained from a teacher autoregressive model or extracted from forced alignments of the training data.
 
-\paragraph{End-to-end models.}
-All two-stage systems share a structural weakness: the vocoder is trained on ground-truth spectrograms but receives predicted ones at inference, and neither model is optimised for perceived audio quality directly. VITS~\cite{kim2021conditional} overcomes this by jointly training a variational acoustic model and a HiFi-GAN decoder using adversarial losses, so the decoder is exposed to imperfect latent representations from the very start of training. The monotonic alignment search from Glow-TTS is incorporated to avoid external aligners. The result is a single model that maps text directly to a waveform, closes the train--test mismatch, and surpasses two-stage baselines in listening tests without sacrificing inference speed.
+One of the first non-autoregressive TTS models is FastSpeech~\cite{ren2019fastspeech}, developed by Microsoft.
+To solve the speed and robustness problems of autoregressive decoders, it introduced a feed-forward Transformer with a duration predictor and length regulator, enabling decoding and frame generation parallel and making synthesis roughly 38 times faster than Tacotron~2 with similar quality.
+A duration predictor, trained on durations from a pre-trained Tacotron model, decides how many frames each phoneme expands to.
+The expanded phoneme representations are then processed by a parallel decoder.
+Because duration is predicted explicitly rather than learned through attention, FastSpeech is already more robust - it does not skip or repeat words.
+This model was a big improvement in terms of speed, robustness and determinism.
+It inspired a whole family of non-autoregressive TTS models that followed.
 
-Table~\ref{tab:tts_comparison} summarises the key properties of these architectures. The following subsections discuss neural vocoders, two-stage pipelines, and end-to-end systems in greater depth.
+The drawback is that the duration predictor must be trained on alignments extracted from a teacher autoregressive model, creating an indirect dependency on Tacotron-style systems.
+Also, since it is an acoustic model, it still relies on a separately trained external vocoder to produce audio.
+The training process of dependency parsing is further complicated by its need on a pre-existing model for aligning the data.
+Certain critiques raise the possibility of a trade-off in terms of expressiveness when comparing to attention-based alternatives~\cite{ren2020fastspeech}.
 
-\subsubsection{Two-Step TTS Pipelines}
+FastSpeech~2~\cite{ren2020fastspeech} was developed to address issues left unanswered by its predecessor.
+Due to its non-autoregressive and deterministic nature, FastSpeech had limited prosody and expressiveness.
+Although the speach was synthesized faster, but voice quality lacked naturalness.
+As the main challenges of text-to-waveform generation, authors provided a big information gap between input (phonemes) and output (mel-spectrograms), and difficult training because of a long output frames and limited GPU memory.
+In FastSpeech~2, authors added modified stronger duration predictor and two additional predictors for pitch and energy, which were trained directly on ground-truth phoneme annotations rather than relying on a teacher model.
+These features improved speech temporal properties and fine-grained prosodic controllability, naturalness and dynamics as an additional benefit.
+Explicit prosodic controls also allow adjusting speaking rate, pitch, and energy independently at inference time.
+Variational Prosody loss allowed FastSpeech~2 to directly learn latent prosody representations from data, enhancing voice synthesis variability and control.
+Model uses adversarial training, a Mel-spectrogram decoder based on WaveNet and Parallel WaveGAN~\cite{yamamoto2020parallel}, and special waveform decoder losses: multi-resolution STFT loss and LSGAN discriminator loss.
 
-The dominant two-step TTS architecture combines a neural acoustic model (predicting mel-spectrograms from text) with a neural vocoder (generating waveforms from mel-spectrograms). The two parts are trained separately, which is flexible --- either can be improved or replaced independently --- but means the acoustic model is optimized for spectrogram accuracy rather than final audio quality.
+However, FastSpeech~2 requires third-party tool to generate phoneme alignments for training the duration predictor, which is problematic for low resource languages like Lithuanian, because there are not many tools to convert text characters to phonemes.
+It still relies on a separately trained vocoder to produce audio.
+The model is also more complex than FastSpeech, with multiple predictors and loss functions that require careful tuning.
 
-%\paragraph{Non-autoregressive acoustic models.}
-%FastSpeech~\cite{ren2019fastspeech} solved the speed and robustness problems of autoregressive decoders with a feed-forward Transformer that generates all frames in parallel. A duration predictor, trained on durations from a pre-trained Tacotron model, decides how many frames each phoneme expands to. The expanded phoneme representations are then processed by a parallel decoder. FastSpeech was about 38 times faster than Tacotron~2 with similar quality.
+\subsubsubsection{Flow-based Models}
 
-%FastSpeech~2~\cite{ren2021fastspeech} removed the need for a teacher model by predicting pitch, energy, and duration directly from the phoneme encoder using dedicated predictors trained on ground-truth values. These explicit prosodic controls also allow adjusting speaking rate, pitch, and energy independently at inference time.
+A different family of models addresses the alignment problem through normalizing flows.
+Glow-TTS~\cite{kim2020glow} learns a monotonic alignment between phonemes and mel-spectrogram frames using a dynamic programming search, without any external aligner.
+The flow-based decoder allows exact likelihood training and fast, high-quality synthesis.
+Critically, because the alignment is learned internally and respects the left-to-right order of speech, the model is inherently robust to word skipping.
+Glow-TTS demonstrated that self-learned alignment could match the quality of attention-based models while offering much better robustness.
+Like most acoustic models of its era, it still requires a separately trained vocoder to produce audio.
 
-\subsubsection{End-to-End Models}
+\subsubsection{End-to-end Models}
 
-Training the acoustic model and vocoder separately creates a mismatch: the vocoder sees natural mel-spectrograms during training but imperfect predicted ones at inference. End-to-end models avoid this by jointly training the full pipeline from text to waveform.
+All two-stage systems share a structural weakness.
+Training the acoustic model and vocoder separately creates a mismatch: the vocoder sees natural mel-spectrograms during training but imperfect predicted ones at inference.
+Neither model is optimised for perceived audio quality directly.
+End-to-end models avoid this by jointly training the full pipeline from text to waveform.
 
-VITS (Variational Inference with adversarial learning for Text-to-Speech)~\cite{kim2021conditional} is the most widely used single-stage model. It combines a variational autoencoder (VAE), a normalizing flow network, and adversarial training in one framework. A posterior encoder maps mel-spectrograms to latent representations; a flow-based prior network learns the distribution of latent variables given text; and a HiFi-GAN decoder generates waveforms from sampled latents. The adversarial and reconstruction losses are trained jointly, so the decoder learns from its own outputs from the start and the prior network is pushed to match the true posterior. At inference, the prior network samples a latent variable from the text alone and the decoder produces the waveform directly, with no intermediate spectrogram. VITS scored higher than Tacotron~2 with WaveGlow in subjective listening tests while generating speech in a single forward pass.
+VITS (Variational Inference with adversarial learning for Text-to-Speech)~\cite{kim2021conditional} overcomes this by combining a variational acoustic autoencoder model, a HiFi-GAN decoder and normalizing flow network and training them jointly using adversarial losses, so the decoder is exposed to imperfect latent representations from the very start of training.
+The monotonic alignment search from Glow-TTS is incorporated to avoid external aligners.
+The result is a single model that maps text directly to a waveform.
+Posterior encoder maps mel-spectrograms to latent representations, a flow-based prior network learns the distribution of latent variables given text and a HiFi-GAN decoder generates waveforms from sampled latents.
+The adversarial and reconstruction losses are trained jointly, so the decoder learns from its own outputs from the start and the prior network is pushed to match the true posterior.
+At inference, the prior network samples a latent variable from the text alone and the decoder produces the waveform directly, with no intermediate spectrogram.
+
+VITS closes the train--test mismatch.
+It scored higher than Tacotron~2 with WaveGlow in subjective listening tests without sacrificing inference speed by generating speech in a single forward pass.
+It is the most widely used single-stage model.
+
+%Table~\ref{tab:tts_comparison} summarises the key properties of these architectures.
 
 %\sectionnonum{Rezultatai}
 %Rezultatų skyriuje išdėstomi pagrindiniai darbo rezultatai: kažkas išanalizuota,
