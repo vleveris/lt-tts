@@ -311,7 +311,6 @@ Certain critiques raise the possibility of a trade-off in terms of expressivenes
 FastSpeech~2~\cite{ren2020fastspeech} was developed to address issues left unanswered by its predecessor.
 Due to its non-autoregressive and deterministic nature, FastSpeech had limited prosody and expressiveness.
 Although the speech was synthesized faster, voice quality lacked naturalness.
-As the main challenges of text-to-waveform generation, authors identified a big information gap between input (phonemes) and output (mel-spectrograms), and difficult training because of long output sequences and limited GPU memory.
 In FastSpeech~2, authors added a modified, stronger duration predictor and two additional predictors for pitch and energy, which were trained directly on ground-truth phoneme annotations rather than relying on a teacher model.
 These features improved speech temporal properties and fine-grained prosodic controllability, naturalness and dynamics as an additional benefit.
 Explicit prosodic controls also allow adjusting speaking rate, pitch, and energy independently at inference time.
@@ -321,11 +320,14 @@ It still relies on a separately trained vocoder to produce audio.
 The model is also more complex than FastSpeech, with multiple predictors and loss functions that require careful tuning.
 
 \paragraph{Glow-TTS.}
-Glow-TTS~\cite{kim2020glow} learns a monotonic alignment between phonemes and mel-spectrogram frames using a dynamic programming search, without any external aligner, based on normalizing flows.
+Glow-TTS~\cite{kim2020glow} learns a monotonic alignment between phonemes and mel-spectrogram frames using a dynamic programming search algorithm.
+Training works without any external phoneme-audio aligner, based on normalizing flows.
 The flow-based decoder allows exact likelihood training and fast, high-quality synthesis.
-Because the alignment is learned internally and respects the left-to-right order of speech, the model is inherently robust to word skipping.
+Because the alignment is learned internally and respects the left-to-right order of speech, the same way as humans read the text, the model is inherently robust to word skipping.
+Its main components include an encoder similar to the one used in Transformer TTS~\cite{li2019neural}, a flow-based decoder that generates mel-spectrograms from latent variables (based on WaveGlow)~\cite{prenger2019waveglow}, and a duration predictor which follows FastSpeech approach~\cite{ren2019fastspeech}.
+
 Glow-TTS demonstrated that self-learned alignment could match the quality of attention-based models while offering better robustness and removing the need for a separately trained teacher model.
-Like most acoustic models of its era, it still requires a separately trained vocoder to produce audio.
+Like most acoustic models, it still requires a separately trained vocoder to produce audio.
 
 \subsubsection{End-to-end Models}
 
@@ -333,6 +335,19 @@ All two-stage systems share a structural weakness.
 Training the acoustic model and vocoder separately creates a mismatch: the vocoder sees natural mel-spectrograms during training but imperfect predicted ones at inference.
 Neither model is optimised for perceived audio quality directly.
 End-to-end models avoid this by jointly training the full pipeline from text to waveform.
+
+Perhaps the first attempts to end-to-end TTS models was Char2Wav~\cite{sotelo2017char2wav}, which combined a Tacotron-style encoder-decoder architecture with a WaveNet vocoder and trained them jointly using a combination of reconstruction and adversarial losses.
+
+\paragraph{FastSpeech~2s.}
+FastSpeech~2 authors in the same article presented FastSpeech~2s, which is an end-to-end version of FastSpeech~2, where the acoustic model and vocoder are trained together.
+Variational Prosody loss allowed FastSpeech~2 to directly learn latent prosody representations from data, enhancing voice synthesis variability and control.
+Model uses adversarial training, a Mel-spectrogram decoder based on WaveNet and Parallel WaveGAN~\cite{yamamoto2020parallel}, and special waveform decoder losses: multi-resolution STFT loss and LSGAN discriminator loss.
+
+As a big challenge they identified a large information gap between the text input and the raw waveform output, which makes it difficult for the model to learn the mapping directly. Also, the training process was slow and complicated due to many GPU resources required for training the vocoder part of the model.
+
+\paragraph{EATS.}
+
+\paragraph{Wave Tacotron}.
 
 \paragraph{VITS.}
 VITS (Variational Inference with adversarial learning for Text-to-Speech)~\cite{kim2021conditional} overcomes this by combining a variational acoustic autoencoder model, a HiFi-GAN decoder and normalizing flow network and training them jointly using adversarial losses, so the decoder is exposed to imperfect latent representations from the very start of training.
