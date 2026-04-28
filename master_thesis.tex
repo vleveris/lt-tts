@@ -336,18 +336,28 @@ Training the acoustic model and vocoder separately creates a mismatch: the vocod
 Neither model is optimised for perceived audio quality directly.
 End-to-end models avoid this by jointly training the full pipeline from text to waveform.
 
-Perhaps the first attempts to end-to-end TTS models was Char2Wav~\cite{sotelo2017char2wav}, which combined a Tacotron-style encoder-decoder architecture with a WaveNet vocoder and trained them jointly using a combination of reconstruction and adversarial losses.
+\paragraph{Char2Wav.}
+One of the first attempts at an end-to-end TTS model was Char2Wav~\cite{sotelo2017char2wav}, developed at MILA.
+It combined an attention-based bidirectional RNN reader that maps characters to vocoder features with a SampleRNN-based neural vocoder, and trained both components jointly so that the system could be optimized as a single network.
+The work demonstrated that text-to-waveform synthesis without hand-crafted intermediate features is feasible, but the resulting speech quality was below that of contemporary two-stage systems and the autoregressive vocoder made inference slow.
 
 \paragraph{FastSpeech~2s.}
-FastSpeech~2 authors in the same article presented FastSpeech~2s, which is an end-to-end version of FastSpeech~2, where the acoustic model and vocoder are trained together.
-Variational Prosody loss allowed FastSpeech~2 to directly learn latent prosody representations from data, enhancing voice synthesis variability and control.
-Model uses adversarial training, a Mel-spectrogram decoder based on WaveNet and Parallel WaveGAN~\cite{yamamoto2020parallel}, and special waveform decoder losses: multi-resolution STFT loss and LSGAN discriminator loss.
-
-As a big challenge they identified a large information gap between the text input and the raw waveform output, which makes it difficult for the model to learn the mapping directly. Also, the training process was slow and complicated due to many GPU resources required for training the vocoder part of the model.
+The authors of FastSpeech~2 also presented FastSpeech~2s in the same article, an end-to-end variant in which the acoustic model and the vocoder are trained together rather than as separate modules.
+The model relies on adversarial training, a waveform decoder inspired by Parallel WaveGAN~\cite{yamamoto2020parallel}, and combined waveform losses such as the multi-resolution STFT loss and the LSGAN discriminator loss.
+As the main challenge the authors identified the large information gap between the text input (phonemes) and the raw waveform output, which makes the mapping difficult to learn directly.
+Training is also slow and resource-intensive because the waveform decoder must be optimized end-to-end together with the rest of the model.
 
 \paragraph{EATS.}
+EATS (End-to-End Adversarial Text-to-Speech)~\cite{donahue2020end} maps raw character or phoneme sequences directly to waveforms using a fully differentiable, GAN-based pipeline.
+The system is split into an aligner that predicts per-token durations and produces a low-frequency feature representation, and a convolutional decoder that upsamples those features into a waveform.
+Training combines adversarial losses with auxiliary spectrogram-based reconstruction losses to stabilise learning.
+EATS demonstrated that high-quality speech can be generated in a single feed-forward pass from text, although the quality at the time of publication still lagged slightly behind the best two-stage systems.
 
-\paragraph{Wave Tacotron}.
+\paragraph{Wave Tacotron.}
+Wave Tacotron~\cite{weiss2021wave} extends the original Tacotron architecture to predict the waveform directly instead of a mel-spectrogram, removing the need for a separate vocoder.
+It keeps the encoder--attention--decoder structure, but the decoder generates short blocks of raw audio samples through a normalizing flow conditioned on the decoder state.
+Because the model is trained end-to-end with a likelihood objective on the waveform itself, it avoids the train--test mismatch that affects two-stage pipelines.
+Its main limitation is inherited from Tacotron: synthesis is autoregressive and therefore slow, and quality is still slightly behind that of strong two-stage baselines.
 
 \paragraph{VITS.}
 VITS (Variational Inference with adversarial learning for Text-to-Speech)~\cite{kim2021conditional} overcomes this by combining a variational acoustic autoencoder model, a HiFi-GAN decoder and normalizing flow network and training them jointly using adversarial losses, so the decoder is exposed to imperfect latent representations from the very start of training.
