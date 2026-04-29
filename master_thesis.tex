@@ -337,7 +337,7 @@ Also, it has the ability to accept either graphemes or phonemes as input, provid
 \paragraph{Glow-TTS.}
 Glow-TTS~\cite{kim2020glow} learns a monotonic alignment between phonemes and mel-spectrogram frames using a dynamic programming search algorithm.
 Training works without any external phoneme-audio aligner and is based on normalizing flows.
-The Glow-TTS encoder maps each character to a Gaussian Distribution, while the decoder uses WaveGlow model layers to convert each spectrogram frame into a latent vector.
+The Glow-TTS encoder maps each character to a Gaussian Distribution, while the decoder uses WaveGlow model layers to convert each spectrogram frame into a latent vector.
 The flow-based decoder allows exact likelihood training and fast, high-quality synthesis, especially for multi-speaker variant of model.
 Because the alignment is learned internally and respects the left-to-right order of speech, the same way as humans read the text, the model is inherently robust to word skipping and longer sentences or phrases.
 Its main components include an encoder similar to the one used in Transformer TTS~\cite{li2019neural}, a flow-based decoder that generates mel-spectrograms from latent variables (based on WaveGlow)~\cite{prenger2019waveglow}, and a duration predictor which follows FastSpeech approach~\cite{ren2019fastspeech}.
@@ -411,6 +411,21 @@ The flow-based prior is augmented with a Transformer block, allowing the model t
 Speaker conditioning is also strengthened so that multi-speaker training works more reliably with limited data per speaker.
 Despite these benefits, VITS~2 is less popular than the original VITS, likely because of its increased complexity and training requirements, and because the original model is already widely used and performs well in many applications.
 Also, the publically available implementation of VITS~2 is not as mature as the original one, authors call it "unofficial implementation". It may further limit its adoption.
+
+\paragraph{BERT-VITS2.}
+BERT-VITS2~\cite{bertvits2} is a community-driven extension of the VITS family that augments the text encoder with contextual embeddings from a pre-trained BERT~\cite{devlin2019bert} language model.
+Despite its name, the project is not strictly built on VITS~2: it began as a fork of the original VITS with BERT integration, and later versions incorporated several VITS 2 improvements such as the adversarial duration predictor and the Transformer block in the flow-based prior.
+In the original VITS family, the encoder receives only phoneme or grapheme symbols, so it must learn everything about prosody, phrasing and emphasis from the speech corpus alone.
+This is a strong limitation for low-resource languages, because rich syntactic and semantic patterns simply do not occur often enough in a small dataset for the model to internalise them.
+BERT-VITS2 addresses this by feeding the input text in parallel through a frozen (or lightly fine-tuned) BERT model, taking the resulting contextual word embeddings, and fusing them with the phoneme-level encoder representations before the flow-based prior.
+The phoneme stream still drives the fine-grained acoustic alignment, while the BERT stream contributes information that phonemes or characters cannot express on their own.
+For example, which word is the syntactic head of a clause, where a sentence boundary lies, or whether the utterance is a statement or a question.
+
+In practice this leads to noticeably more natural prosody: more appropriate pause placement, smoother intonation contours over long sentences, clearer focus accentuation on the semantically important word, and better disambiguation of homographs.
+The approach has become especially popular for languages where prosody depends heavily on syntax and discourse context, such as Chinese and Japanese, but the same mechanism transfers to other languages whenever a suitable pre-trained BERT is available.
+A particularly attractive property in the context of Lithuanian TTS is that multilingual BERT models, including ones that cover Lithuanian, can be plugged in without retraining the language model from scratch.
+This effectively lets the TTS model borrow linguistic knowledge from a much larger text corpus than the available Lithuanian speech data, partially compensating for the lack of data.
+The trade-offs are the usual ones: training and inference become heavier because the BERT encoder must be evaluated for every utterance, the model becomes harder to deploy on constrained hardware, and design choices such as which BERT layer to take embeddings from, how to align word-level embeddings with phonemes, and whether to fine-tune the BERT weights all need to be made carefully.
 
 %Table~\ref{tab:tts_comparison} summarises the key properties of these architectures.
 

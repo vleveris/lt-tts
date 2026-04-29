@@ -9,3 +9,5 @@
 /*.pdf
 CLAUDE.md
 .claude/settings.local.json
+*.bcf-SAVE-ERROR
+*.toc
