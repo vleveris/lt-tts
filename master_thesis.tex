@@ -319,15 +319,33 @@ However, FastSpeech~2 requires a third-party tool to generate phoneme alignments
 It still relies on a separately trained vocoder to produce audio.
 The model is also more complex than FastSpeech, with multiple predictors and loss functions that require careful tuning.
 
+\paragraph{FastPitch.}
+FastPitch~\cite{lancucki2021fastpitch}, developed by NVIDIA, is a non-autoregressive acoustic model that builds on the FastSpeech architecture but conditions the feed-forward Transformer explicitly on the fundamental frequency (pitch) of each input symbol.
+Its approach deviates from other text-to-speech models by prioritizing autonomy in the process of aligning audio with transcriptions.
+A dedicated pitch predictor estimates a single average pitch value per phoneme during training, and these values are added to the encoded representation before length regulation, so the decoder receives both linguistic and prosodic information when generating the mel-spectrogram.
+This state implies that there is no longer a dependence on external alignment models, such as Transformer TTS or Tacotron~2.
+The model possesses an ability to forecast pitch contour, a characteristic that enhances the possibility of natural voice modulation in the resulting audio~\cite{liu2023comparative}.
+Compared to FastSpeech, this simple conditioning leads to more natural-sounding prosody and noticeably reduces the muffled quality typical of early non-autoregressive models.
+At inference, the predicted pitch contour can be manipulated directly to change intonation or emphasis without retraining, making the model attractive for expressive synthesis.
+One of the notable advantages of FastPitch is that it's effitient in reducing audio artifacts, hence guaranteeing improved sound quality and accelerated training convergence.
+Like FastSpeech, training requires phoneme durations from an external aligner or a teacher autoregressive model, and a separately trained vocoder (commonly HiFi-GAN) is still needed to produce the final waveform.
+FastPitch and FastSpeech~2 were trained at a similar time, and they represent two different approaches to improving the quality of non-autoregressive TTS models: FastSpeech~2 focuses on adding explicit prosodic predictors, while FastPitch emphasizes conditioning on pitch to enhance naturalness.
+An additional advantage of this system is its capability to make training easier as a multi-speaker model enhancing its adaptability.
+FastPitch offers users a comprehensive range of options for manipulating synthesized speech, including control over prosody, speech speed, and energy levels.
+Also, it has the ability to accept either graphemes or phonemes as input, providing easier training setup and wider potential applications for various languages.
+
 \paragraph{Glow-TTS.}
 Glow-TTS~\cite{kim2020glow} learns a monotonic alignment between phonemes and mel-spectrogram frames using a dynamic programming search algorithm.
-Training works without any external phoneme-audio aligner, based on normalizing flows.
-The flow-based decoder allows exact likelihood training and fast, high-quality synthesis.
-Because the alignment is learned internally and respects the left-to-right order of speech, the same way as humans read the text, the model is inherently robust to word skipping.
+Training works without any external phoneme-audio aligner and is based on normalizing flows.
+The Glow-TTS encoder maps each character to a Gaussian Distribution, while the decoder uses WaveGlow model layers to convert each spectrogram frame into a latent vector.
+The flow-based decoder allows exact likelihood training and fast, high-quality synthesis, especially for multi-speaker variant of model.
+Because the alignment is learned internally and respects the left-to-right order of speech, the same way as humans read the text, the model is inherently robust to word skipping and longer sentences or phrases.
 Its main components include an encoder similar to the one used in Transformer TTS~\cite{li2019neural}, a flow-based decoder that generates mel-spectrograms from latent variables (based on WaveGlow)~\cite{prenger2019waveglow}, and a duration predictor which follows FastSpeech approach~\cite{ren2019fastspeech}.
+Monotonic alignment search is ignored during inference, so the model only uses the duration predictor.
 
-Glow-TTS demonstrated that self-learned alignment could match the quality of attention-based models while offering better robustness and removing the need for a separately trained teacher model.
-Like most acoustic models, it still requires a separately trained vocoder to produce audio.
+Glow-TTS's lack of external aligners is a major advantage.
+This model demonstrated that self-learned alignment could match the quality of attention-based models when generating speech 15 times faster than Tacotron~2 while offering better robustness and removing the need for a separately trained teacher model.
+However, like most acoustic models, it still requires a separately trained vocoder to produce audio.
 
 \subsubsection{End-to-end Models}
 
@@ -357,18 +375,30 @@ EATS demonstrated that high-quality speech can be generated in a single feed-for
 Wave Tacotron~\cite{weiss2021wave} extends the original Tacotron architecture to predict the waveform directly instead of a mel-spectrogram, removing the need for a separate vocoder.
 It keeps the encoder--attention--decoder structure, but the decoder generates short blocks of raw audio samples through a normalizing flow conditioned on the decoder state.
 Because the model is trained end-to-end with a likelihood objective on the waveform itself, it avoids the train--test mismatch that affects two-stage pipelines.
-Its main limitation is inherited from Tacotron: synthesis is autoregressive and therefore slow, and quality is still slightly behind that of strong two-stage baselines.
+Its main limitation is inherited from Tacotron: synthesis is autoregressive and therefore slow, and quality is still slightly behind that of strong two-stage pipelines.
 
 \paragraph{VITS.}
-VITS (Variational Inference with adversarial learning for Text-to-Speech)~\cite{kim2021conditional} overcomes this by combining a variational acoustic autoencoder model, a HiFi-GAN decoder and normalizing flow network and training them jointly using adversarial losses, so the decoder is exposed to imperfect latent representations from the very start of training.
+VITS (Conditional Variational Autoencoder with Adversarial Learning for End-to-End Text-to-Speech)~\cite{kim2021conditional} is an advance TTS model which uses inovative methods to generate high-quality speech.
+It combines a variational acoustic autoencoder model, a HiFi-GAN decoder and normalizing flow network and training them jointly using adversarial losses, so the decoder is exposed to imperfect latent representations from the very start of training.
+Normalizing flows allow the model to learn a complex distribution of latent variables that can be sampled from at inference time.
 The monotonic alignment search from Glow-TTS is incorporated to avoid external aligners.
 The result is a single model that maps text directly to a waveform.
-Posterior encoder maps mel-spectrograms to latent representations, a flow-based prior network learns the distribution of latent variables given text and a HiFi-GAN decoder generates waveforms from sampled latents.
-The adversarial and reconstruction losses are trained jointly, so the decoder learns from its own outputs from the start and the prior network is pushed to match the true posterior.
+The posterior encoder maps mel-spectrograms to latent representations, a flow-based prior network learns the distribution of latent variables given text, and a HiFi-GAN decoder generates waveforms from sampled latents.
+VITS paper authors used phoneme sequences as inputs to the model, but since the phoneme-audio alignment is learned internally and does not require external tools, any text representation like plain or accented graphemes can be used.
+
+Additionally, VITS utilizes Adversarial Training.
+This approach involves a generator and a discriminator.
+The generator tries to produce audio that's as close to real data as possible, while the discriminator learns to differentiate between original and synthesized speech.
+As training continues, the generator improves to fool the discriminator, thereby producing higher-quality audio.
+In VITS, this strategy is applied directly on the audio waveform.
+The adversarial and reconstruction losses are trained together, so the decoder learns from its own outputs from the start and the prior network is pushed to match the true posterior.
 At inference, the prior network samples a latent variable from the text alone and the decoder produces the waveform directly, with no intermediate spectrogram.
+VITS also emphasizes the importance of different pronunciations of the same phrases.
+To capture different pitch, duration and rhythm, a stochastic duration predictor is used.
 
 VITS closes the train--test mismatch.
 It scored higher than Tacotron~2 with WaveGlow in subjective listening tests without sacrificing inference speed by generating speech in a single forward pass.
+VITS not only produces high-quality speech but also offers explicit control over prosody through its latent variables, which can be manipulated at inference time to change speaking style, emotion or emphasis without retraining.
 It is the most widely used single-stage model.
 
 %Table~\ref{tab:tts_comparison} summarises the key properties of these architectures.
