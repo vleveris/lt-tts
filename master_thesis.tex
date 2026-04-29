@@ -400,6 +400,17 @@ VITS closes the train--test mismatch.
 It scored higher than Tacotron~2 with WaveGlow in subjective listening tests without sacrificing inference speed by generating speech in a single forward pass.
 VITS not only produces high-quality speech but also offers explicit control over prosody through its latent variables, which can be manipulated at inference time to change speaking style, emotion or emphasis without retraining.
 It is the most widely used single-stage model.
+Some of the drawbacks, however, are the complexity of training and the need for careful tuning of adversarial losses to achieve stable convergence.
+
+\paragraph{VITS~2.}
+VITS~2~\cite{kong2023vits2} is a direct successor that addresses several practical weaknesses of the original model.
+Most notable ones are less natural prosody on long sentences, the strong dependence on input data quality, and the relatively slow and long-taking training.
+The architecture remains a conditional variational autoencoder with a flow-based prior and a HiFi-GAN-style waveform decoder, but several components are redesigned.
+The stochastic duration predictor is reformulated with adversarial training, which produces more natural and varied rhythm without losing controllability.
+The flow-based prior is augmented with a Transformer block, allowing the model to capture longer-range dependencies in the latent space and improving naturalness on longer utterances.
+Speaker conditioning is also strengthened so that multi-speaker training works more reliably with limited data per speaker.
+Despite these benefits, VITS~2 is less popular than the original VITS, likely because of its increased complexity and training requirements, and because the original model is already widely used and performs well in many applications.
+Also, the publically available implementation of VITS~2 is not as mature as the original one, authors call it "unofficial implementation". It may further limit its adoption.
 
 %Table~\ref{tab:tts_comparison} summarises the key properties of these architectures.
 
